@@ -8,3 +8,9 @@ int main(void)
 
     return 0;
 }
+
+void exit(int code)
+{
+    while(1)
+        ;
+}

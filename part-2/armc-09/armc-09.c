@@ -37,6 +37,35 @@
 
 #include "rpi-gpio.h"
 
+#define RPMV_D0	(1 << 0)
+#define MD00_PIN	0
+#define RA08	(1 << 8)
+#define RA09	(1 << 9)
+#define RA10	(1 << 10)
+#define RA11	(1 << 11)
+#define RA12	(1 << 12)
+#define RA13	(1 << 13)
+#define RA14	(1 << 14)
+#define RA15	(1 << 15)
+#define LE_A	(1 << 16)
+#define LE_B	(1 << 17)
+#define LE_D	(1 << 26)
+#define RCLK	(1 << 25)
+#define RWAIT	(1 << 24)
+#define RINT	(1 << 20)
+#define RBUSDIR (1 << 22)
+
+#define SLTSL	RA11
+#define MREQ	RA10
+#define IORQ	RA12
+#define RD		RA08
+#define WR		RA14
+#define RESET	RA13
+
+unsigned char ROM[] = {
+#include "rom.c"
+};	
+
 /** GPIO Register set */
 volatile unsigned int* gpio = (unsigned int*)GPIO_BASE;
 
@@ -45,33 +74,32 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 {
     int loop;
     unsigned int* counters;
-
+	unsigned char *addr;
+	unsigned short addr0;
+	unsigned char byte;
+	int i = 0;
+	
     /* Set the LED GPIO pin to an output to drive the LED */
-    gpio[LED_GPFSEL] |= ( 1 << LED_GPFBIT );
+    gpio[GPIO_GPFSEL0] = 0x49249249;
+	gpio[GPIO_GPFSEL1] = 0x49249249;
+	gpio[GPIO_GPFSEL2] = (1 << 6*3);
+	
+	gpio[GPIO_GPCLR0] = LE_A | 0xffff;
+	gpio[GPIO_GPSET0] = LE_B;
 
-    /* Allocate a block of memory for counters */
-    counters = malloc( 1024 * sizeof( unsigned int ) );
-
-    /* Failed to allocate memory! */
-    if( counters == NULL )
-        while(1) {     LED_ON();/* Trap here */ }
-
-    for( loop=0; loop<1024; loop++ )
-        counters[loop] = 0;
-
-    /* Never exit as there is no OS to exit to! */
     while(1)
     {
-        /* Light the LED */
-        LED_ON();
-
-        for(counters[0] = 0; counters[0] < 500000; counters[0]++)
-            ;
-
-        /* Set the GPIO16 output low ( Turn OK LED on )*/
-        LED_OFF();
-
-        for(counters[1] = 0; counters[1] < 500000; counters[1]++)
-            ;
+		if (!(gpio[GPIO_GPLEV0] & SLTSL))
+		{
+			gpio[GPIO_GPSET0] = (LE_A);
+			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
+			asm ( "nop; nop;" );
+			byte = ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
+			gpio[GPIO_GPSET0] = 0xff & (gpio[GPIO_GPLEV0] >> 9);
+			gpio[GPIO_GPSET0] = LE_B;
+			gpio[GPIO_GPCLR0] = (LE_A);
+			while(!(gpio[GPIO_GPLEV0] & SLTSL));
+		}		
+		
     }
 }
