@@ -94,8 +94,17 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 			gpio[GPIO_GPSET0] = (LE_A);
 			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
 			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
+			asm ( "nop; nop;" );
 			byte = ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
-			gpio[GPIO_GPSET0] = 0xff & (gpio[GPIO_GPLEV0] >> 9);
+			gpio[GPIO_GPSET0] = 0xff & (gpio[GPIO_GPLEV0]);
 			gpio[GPIO_GPSET0] = LE_B;
 			gpio[GPIO_GPCLR0] = (LE_A);
 			while(!(gpio[GPIO_GPLEV0] & SLTSL));
