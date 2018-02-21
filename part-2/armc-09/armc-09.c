@@ -36,6 +36,7 @@
 #include <stdlib.h>
 
 #include "rpi-gpio.h"
+#include "barrier.h"
 
 #define RPMV_D0	(1 << 0)
 #define MD00_PIN	0
@@ -91,23 +92,14 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
     {
 		if (!(gpio[GPIO_GPLEV0] & SLTSL))
 		{
-			gpio[GPIO_GPSET0] = (LE_A);
 			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			asm ( "nop; nop;" );
-			byte = ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
-			gpio[GPIO_GPSET0] = 0xff & (gpio[GPIO_GPLEV0]);
-			gpio[GPIO_GPSET0] = LE_B;
+			gpio[GPIO_GPSET0] = (LE_A);
+			dmb();
+			gpio[GPIO_GPSET0] = LE_B | 0xff & ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
 			gpio[GPIO_GPCLR0] = (LE_A);
+			dmb();
 			while(!(gpio[GPIO_GPLEV0] & SLTSL));
+			dmb();
 		}		
 		
     }

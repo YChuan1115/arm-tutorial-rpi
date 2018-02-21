@@ -70,6 +70,6 @@ add_executable( armc-${TUT}
 
 add_custom_command(
     TARGET armc-${TUT} POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} ./armc-${TUT} -O binary ./kernel.img
+    COMMAND ${CMAKE_OBJCOPY} ./armc-${TUT} -O binary ./${KERNEL_IMAGE}.img
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Convert the ELF output file to a binary image" )
