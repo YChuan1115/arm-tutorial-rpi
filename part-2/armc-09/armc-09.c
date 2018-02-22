@@ -63,12 +63,61 @@
 #define WR		RA14
 #define RESET	RA13
 
+#define MMUTABLEBASE 0x00004000
+
 unsigned char ROM[] = {
 #include "rom.c"
 };	
 
 /** GPIO Register set */
 volatile unsigned int* gpio = (unsigned int*)GPIO_BASE;
+
+void PUT32 ( unsigned int a, unsigned int b)
+{
+	*(unsigned int *)a = b;
+}
+unsigned int GET32 ( unsigned int a)
+{
+	return *(unsigned int *)a;
+}
+extern void start_mmu ( unsigned int, unsigned int );
+extern void stop_mmu ( void );
+extern void invalidate_tlbs ( void );
+extern void invalidate_caches ( void );
+
+//-------------------------------------------------------------------
+unsigned int mmu_section ( unsigned int vadd, unsigned int padd, unsigned int flags )
+{
+    unsigned int ra;
+    unsigned int rb;
+    unsigned int rc;
+
+    ra=vadd>>20;
+    rb=MMUTABLEBASE|(ra<<2);
+    rc=(padd&0xFFF00000)|0xC00|flags|2;
+    //hexstrings(rb); hexstring(rc);
+    PUT32(rb,rc);
+    return(0);
+}
+//-------------------------------------------------------------------
+unsigned int mmu_small ( unsigned int vadd, unsigned int padd, unsigned int flags, unsigned int mmubase )
+{
+    unsigned int ra;
+    unsigned int rb;
+    unsigned int rc;
+
+    ra=vadd>>20;
+    rb=MMUTABLEBASE|(ra<<2);
+    rc=(mmubase&0xFFFFFC00)/*|(domain<<5)*/|1;
+    //hexstrings(rb); hexstring(rc);
+    PUT32(rb,rc); //first level descriptor
+    ra=(vadd>>12)&0xFF;
+    rb=(mmubase&0xFFFFFC00)|(ra<<2);
+    rc=(padd&0xFFFFF000)|(0xFF0)|flags|2;
+    //hexstrings(rb); hexstring(rc);
+    PUT32(rb,rc); //second level descriptor
+    return(0);
+}
 
 /** Main function - we'll never return from here */
 void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
@@ -79,6 +128,11 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 	unsigned short addr0;
 	unsigned char byte;
 	int i = 0;
+
+    //peripherals	
+    mmu_section(0x20000000,0x20000000,0x0000); //NOT CACHED!
+    mmu_section(0x20200000,0x20200000,0x0000); //NOT CACHED!	
+    start_mmu(MMUTABLEBASE,0x00000001|0x1000|0x0004); //[23]=0 subpages enabled = legacy ARMv4,v5 and v6 
 	
     /* Set the LED GPIO pin to an output to drive the LED */
     gpio[GPIO_GPFSEL0] = 0x49249249;
@@ -94,12 +148,9 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 		{
 			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
 			gpio[GPIO_GPSET0] = (LE_A);
-			dmb();
 			gpio[GPIO_GPSET0] = LE_B | 0xff & ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
 			gpio[GPIO_GPCLR0] = (LE_A);
-			dmb();
 			while(!(gpio[GPIO_GPLEV0] & SLTSL));
-			dmb();
 		}		
 		
     }
