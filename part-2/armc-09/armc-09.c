@@ -147,7 +147,7 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
     {
 		if (!(gpio[GPIO_GPLEV0] & SLTSL))
 		{
-			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
+			gpio[GPIO_GPCLR0] = (LE_B) | 0xff; 
 			gpio[GPIO_GPSET0] = (LE_A);
 			dmb();
 			byte = ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
