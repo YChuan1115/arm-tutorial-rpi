@@ -95,7 +95,6 @@ unsigned int mmu_section ( unsigned int vadd, unsigned int padd, unsigned int fl
     ra=vadd>>20;
     rb=MMUTABLEBASE|(ra<<2);
     rc=(padd&0xFFF00000)|0xC00|flags|2;
-    //hexstrings(rb); hexstring(rc);
     PUT32(rb,rc);
     return(0);
 }
@@ -109,12 +108,10 @@ unsigned int mmu_small ( unsigned int vadd, unsigned int padd, unsigned int flag
     ra=vadd>>20;
     rb=MMUTABLEBASE|(ra<<2);
     rc=(mmubase&0xFFFFFC00)/*|(domain<<5)*/|1;
-    //hexstrings(rb); hexstring(rc);
     PUT32(rb,rc); //first level descriptor
     ra=(vadd>>12)&0xFF;
     rb=(mmubase&0xFFFFFC00)|(ra<<2);
     rc=(padd&0xFFFFF000)|(0xFF0)|flags|2;
-    //hexstrings(rb); hexstring(rc);
     PUT32(rb,rc); //second level descriptor
     return(0);
 }
@@ -127,18 +124,22 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 	unsigned char *addr;
 	unsigned short addr0;
 	unsigned char byte;
+	unsigned int ra;
 	int i = 0;
 
+    for(ra=0;;ra+=0x00100000)
+    {
+        mmu_section(ra,ra,0x0000);
+        if(ra==0xFFF00000) break;
+    }	
     //peripherals	
     mmu_section(0x20000000,0x20000000,0x0000); //NOT CACHED!
     mmu_section(0x20200000,0x20200000,0x0000); //NOT CACHED!	
     start_mmu(MMUTABLEBASE,0x00000001|0x1000|0x0004); //[23]=0 subpages enabled = legacy ARMv4,v5 and v6 
-	
     /* Set the LED GPIO pin to an output to drive the LED */
     gpio[GPIO_GPFSEL0] = 0x49249249;
 	gpio[GPIO_GPFSEL1] = 0x49249249;
-	gpio[GPIO_GPFSEL2] = (1 << 6*3);
-	
+	gpio[GPIO_GPFSEL2] = (1 << 6*3) | (1 << 6*2);
 	gpio[GPIO_GPCLR0] = LE_A | 0xffff;
 	gpio[GPIO_GPSET0] = LE_B;
 
@@ -148,10 +149,29 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 		{
 			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
 			gpio[GPIO_GPSET0] = (LE_A);
-			gpio[GPIO_GPSET0] = LE_B | 0xff & ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
+			dmb();
+			byte = ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
+			//byte = (gpio[GPIO_GPLEV0] & 0xffff) >> 8;
+			gpio[GPIO_GPSET0] = LE_B | 0xff & byte;
+			dmb();
 			gpio[GPIO_GPCLR0] = (LE_A);
+			flushcache();
 			while(!(gpio[GPIO_GPLEV0] & SLTSL));
-		}		
-		
+		}
+#if 0		
+		else if (!(gpio[GPIO_GPLEV0] & IORQ))
+		{
+			gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
+			gpio[GPIO_GPSET0] = (LE_A) | RBUSDIR;
+			flushcache();
+			byte = gpio[GPIO_GPLEV0] & 0xff; 
+			gpio[GPIO_GPSET0] = LE_B | 0xff & byte;
+			gpio[GPIO_GPCLR0] = (LE_A);
+			flushcache();
+			while(!(gpio[GPIO_GPLEV0] & IORQ))
+				flushcache();
+			gpio[GPIO_GPCLR0] = RBUSDIR;
+		}
+#endif		
     }
 }

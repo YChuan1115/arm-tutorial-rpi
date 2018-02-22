@@ -22,7 +22,11 @@
 #define dsb() asm volatile \
 		("mcr p15, #0, %[zero], c7, c10, #4" : : [zero] "r" (0) )
 
+#define invmva() asm volatile \
+		("mcr p15, #0, %[zero], c7, c10, #1" : : [zero] "r" (0) )
 
+#define invset() asm volatile \
+		("mcr p15, #0, %[zero], c7, c10, #2" : : [zero] "r" (0) )
 /*
  * Clean and invalidate entire cache
  * Flush pending writes to main memory
