@@ -48,8 +48,8 @@ void _cstartup( unsigned int r0, unsigned int r1, unsigned int r2 )
         See https://sourceware.org/newlib/libc.html#Stubs for further
             information on the c-library stubs
     */
-    while( bss < bss_end )
-        *bss++ = 0;
+//    while( bss < bss_end )
+ //       *bss++ = 0;
 
     /* We should never return from main ... */
     kernel_main( r0, r1, r2 );
