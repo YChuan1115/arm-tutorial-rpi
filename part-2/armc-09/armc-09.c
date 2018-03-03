@@ -186,14 +186,14 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 				{
 					gpio[GPIO_GPCLR0] =  0xff | LE_B; 
 					gpio[GPIO_GPSET0] = (LE_A);
-					flushcache(); dmb(); 
+					flushcache(); dsb(); 
 					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
 					pg = (addr0 & 0xe000)>>13;
 					byte = ROM[page[pg] * 0x2000 + (addr0 & 0x1fff)];
 					gpio[GPIO_GPSET0] = LE_B | byte;
-					flushcache(); dmb();
+					flushcache(); dsb(); 
 					gpio[GPIO_GPCLR0] = (LE_A);
-					flushcache(); dmb();
+					flushcache(); dsb(); 
 				}
 				else if (signal & WR)
 				{
@@ -202,10 +202,10 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 					gpio[GPIO_GPSET0] = (LE_A);
 					flushcache(); dmb(); 
 					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
-					dsb();
 					pg = (addr0 & 0xe000)>>13;
 					if (!(addr0 & 0x1fff) & pg > 2)
 						page[pg] = byte;
+					dsb();
 					gpio[GPIO_GPSET0] = LE_B;
 					flushcache(); dmb();
 					gpio[GPIO_GPCLR0] = (LE_A);
