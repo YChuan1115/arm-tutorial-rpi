@@ -65,8 +65,9 @@
 
 #define MMUTABLEBASE 0x00004000
 
-unsigned char ROM[] = {
-#include "gradius.bin"
+static unsigned char ROM[] = {
+//#include "Antarctic.bin"
+#include "Gradius.bin"
 };	
 
 /** GPIO Register set */
@@ -122,15 +123,15 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
     int loop;
     unsigned int* counters;
 	unsigned char *addr;
-	unsigned short volatile addr0;
+	unsigned int addr0;
 	unsigned char byte;
 	unsigned int ra;
 	int i = 0;
 	int page[8] = {0,0,0,1,2,3,4,5};
-	int mapper = 0;
+	int mapper = 1;
+	int signal = 0;
+	int pg = 0;
 
-	if (sizeof(ROM) > 32768)
-		mapper = 1;
     for(ra=0;;ra+=0x00100000)
     {
         mmu_section(ra,ra,0x0000);
@@ -146,80 +147,72 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 	gpio[GPIO_GPFSEL2] = (1 << 6*3) | (1 << 6*2);
 	gpio[GPIO_GPCLR0] = LE_A | 0xffff;
 	gpio[GPIO_GPSET0] = LE_B;
-
+	flushcache(); dmb();
+	if (sizeof(ROM) > 32768)
+		mapper = 1;
 	if (!mapper)
 	{
 		while(1)
 		{
-			if (!(gpio[GPIO_GPLEV0] & SLTSL))
+			signal = ~gpio[GPIO_GPLEV0];
+			if (signal & SLTSL)
 			{
-				if (!(gpio[GPIO_GPLEV0] & RD))
+				if (signal & RD)
 				{
-					gpio[GPIO_GPCLR0] = (LE_B) | 0xff; 
+					gpio[GPIO_GPCLR0] =  0xff | LE_B; 
 					gpio[GPIO_GPSET0] = (LE_A);
 					flushcache(); dmb();
-	//				if (!mapper)
-						byte = ROM[((gpio[GPIO_GPLEV0] & 0xffff) - 0x4000)];
-	//				else
-	//				{
-	//					addr0 = (gpio[GPIO_GPLEV0] & 0xffff); flushcache(); dmb();
-	//					byte = ROM[(page[(addr0 >> 13)] << 13) | addr0 & 0x1fff];
-	//				}
-					gpio[GPIO_GPSET0] = LE_B | 0xff & byte;
+					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
+					pg = (addr0 & 0xe000)>>13;
+					byte = ROM[page[pg] * 0x2000 + (addr0 & 0x1fff)];
+					gpio[GPIO_GPSET0] = LE_B | byte;
 					flushcache(); dmb();
 					gpio[GPIO_GPCLR0] = (LE_A);
 					flushcache(); dmb();
 				}
+				else
+					continue;
 				while(!(gpio[GPIO_GPLEV0] & SLTSL));
 			}
-	#if 0		
-			else if (!(gpio[GPIO_GPLEV0] & IORQ))
-			{
-				gpio[GPIO_GPCLR0] = (LE_B | 0xffff);
-				gpio[GPIO_GPSET0] = (LE_A) | RBUSDIR;
-				flushcache();
-				byte = gpio[GPIO_GPLEV0] & 0xff; 
-				gpio[GPIO_GPSET0] = LE_B | 0xff & byte;
-				gpio[GPIO_GPCLR0] = (LE_A);
-				flushcache();
-				while(!(gpio[GPIO_GPLEV0] & IORQ))
-					flushcache();
-				gpio[GPIO_GPCLR0] = RBUSDIR;
-			}
-	#endif		
 		}
 	} else
 	{
 		while(1)
 		{
-			if (!(gpio[GPIO_GPLEV0] & SLTSL))
+			signal = ~gpio[GPIO_GPLEV0];
+			if (signal & SLTSL)
 			{
-				if (!(gpio[GPIO_GPLEV0] & RD))
+				if (signal & RD)
 				{
-					gpio[GPIO_GPCLR0] = (LE_B) | 0xff; 
+					gpio[GPIO_GPCLR0] =  0xff | LE_B; 
 					gpio[GPIO_GPSET0] = (LE_A);
-					flushcache(); dmb();
-					addr0 = (gpio[GPIO_GPLEV0] & 0xffff); 
-					flushcache(); dmb();
-					byte = ROM[(page[(addr0 >> 13)] << 13) | addr0 & 0x1fff];
-					gpio[GPIO_GPSET0] = LE_B | 0xff & byte;
+					flushcache(); dmb(); 
+					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
+					pg = (addr0 & 0xe000)>>13;
+					byte = ROM[page[pg] * 0x2000 + (addr0 & 0x1fff)];
+					gpio[GPIO_GPSET0] = LE_B | byte;
 					flushcache(); dmb();
 					gpio[GPIO_GPCLR0] = (LE_A);
 					flushcache(); dmb();
 				}
-				else if(!(gpio[GPIO_GPLEV0] & WR))
+				else if (signal & WR)
 				{
-					gpio[GPIO_GPCLR0] = (LE_B) | 0xff; 
+					byte = 0x1f & gpio[GPIO_GPLEV0];
+					gpio[GPIO_GPCLR0] =  0xff | LE_B; 
 					gpio[GPIO_GPSET0] = (LE_A);
+					flushcache(); dmb(); 
+					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
+					dsb();
+					pg = (addr0 & 0xe000)>>13;
+					if (!(addr0 & 0x1fff) & pg > 2)
+						page[pg] = byte;
+					gpio[GPIO_GPSET0] = LE_B;
 					flushcache(); dmb();
-					addr0 = (gpio[GPIO_GPLEV0] & 0xffff); 
-					flushcache(); dmb();
-					gpio[GPIO_GPSET0] = (LE_B);
 					gpio[GPIO_GPCLR0] = (LE_A);
 					flushcache(); dmb();
-					page[addr0 >> 13] = gpio[GPIO_GPLEV0] & 0xff;
-					flushcache(); dmb();
 				}
+				else
+					continue;
 				while(!(gpio[GPIO_GPLEV0] & SLTSL));
 			}			
 		}
