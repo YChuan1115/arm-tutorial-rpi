@@ -52,7 +52,9 @@
 #define LE_B	(1 << 17)
 #define LE_D	(1 << 26)
 #define RCLK	(1 << 25)
-#define RWAIT	(1 << 24)
+#define RWAIT	(1 << 18)
+#define RST0	(1 << 19)
+#define RST		(1 << 23)
 #define RINT	(1 << 20)
 #define RBUSDIR (1 << 22)
 
@@ -68,6 +70,7 @@
 static unsigned char ROM[] = {
 //#include "Antarctic.bin"
 #include "Gradius.bin"
+//#include "zemix.bin"
 };	
 
 /** GPIO Register set */
@@ -142,12 +145,14 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
     mmu_section(0x20200000,0x20200000,0x0000); //NOT CACHED!	
     start_mmu(MMUTABLEBASE,0x00000001|0x1000|0x0004); //[23]=0 subpages enabled = legacy ARMv4,v5 and v6 
     /* Set the LED GPIO pin to an output to drive the LED */
+
     gpio[GPIO_GPFSEL0] = 0x49249249;
 	gpio[GPIO_GPFSEL1] = 0x49249249;
-	gpio[GPIO_GPFSEL2] = (1 << 6*3) | (1 << 6*2);
+	gpio[GPIO_GPFSEL2] = (1 << 12) | (1 << (3 * 3));
 	gpio[GPIO_GPCLR0] = LE_A | 0xffff;
-	gpio[GPIO_GPSET0] = LE_B;
+	gpio[GPIO_GPSET0] = LE_B | RWAIT;
 	flushcache(); dmb();
+
 	if (sizeof(ROM) > 32768)
 		mapper = 1;
 	if (!mapper)
@@ -186,30 +191,27 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 				{
 					gpio[GPIO_GPCLR0] =  0xff | LE_B; 
 					gpio[GPIO_GPSET0] = (LE_A);
-					flushcache(); dsb(); 
+					flushcache(); dmb();
 					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
 					pg = (addr0 & 0xe000)>>13;
 					byte = ROM[page[pg] * 0x2000 + (addr0 & 0x1fff)];
 					gpio[GPIO_GPSET0] = LE_B | byte;
-					flushcache(); dsb(); 
 					gpio[GPIO_GPCLR0] = (LE_A);
-					flushcache(); dsb(); 
+					flushcache(); dmb();
 				}
 				else if (signal & WR)
 				{
 					byte = 0x1f & gpio[GPIO_GPLEV0];
 					gpio[GPIO_GPCLR0] =  0xff | LE_B; 
 					gpio[GPIO_GPSET0] = (LE_A);
-					flushcache(); dmb(); 
+					flushcache(); dmb();
 					addr0 = gpio[GPIO_GPLEV0] & 0xffff;
 					pg = (addr0 & 0xe000)>>13;
-					if (!(addr0 & 0x1fff) & pg > 2)
+					if ((!(addr0 & 0x1fff) & pg > 2) || (!(addr0 & 0xfff)))
 						page[pg] = byte;
-					dsb();
 					gpio[GPIO_GPSET0] = LE_B;
-					flushcache(); dmb();
 					gpio[GPIO_GPCLR0] = (LE_A);
-					flushcache(); dmb();
+					flushcache(); dmb(); 
 				}
 				else
 					continue;
