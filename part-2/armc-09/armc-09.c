@@ -137,7 +137,7 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 
     for(ra=0;;ra+=0x00100000)
     {
-        mmu_section(ra,ra,0x0000);
+        mmu_section(ra,ra,0x0010);
         if(ra==0xFFF00000) break;
     }	
     //peripherals	
