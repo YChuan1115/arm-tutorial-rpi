@@ -10,10 +10,13 @@
 #define dmb() asm volatile \
 		("DMB ISHST");
 #else
-#define dmb() asm volatile \
-		("mcr p15, #0, %[zero], c7, c7, #0" : : [zero] "r" (0) ); \
+#define dmb() \
 		asm volatile \
-		("mcr p15, #0, %[zero], c7, c10, #0" : : [zero] "r" (0) ); 		
+		("mcr p15, #0, %[zero], c7, c10, #0" : : [zero] "r" (0) ); \
+		asm volatile \
+		("mcr p15, #0, %[zero], c7, c14, #0" : : [zero] "r" (0) ); \
+		asm volatile \
+		("mcr p15, #0, %[zero], c7, c7, #0" : : [zero] "r" (0) );
 #endif
 
 /*
@@ -34,7 +37,9 @@
  * Flush pending writes to main memory
  * Remove all data in data cache
  */
-#define flushcache() asm volatile \
+#define flushcache() 
+
+//asm volatile \
 		("mcr p15, #0, %[zero], c7, c14, #0" : : [zero] "r" (0) )
 
 #endif	/* BARRIER_H */
