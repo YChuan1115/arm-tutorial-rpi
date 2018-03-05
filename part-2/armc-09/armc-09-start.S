@@ -39,7 +39,7 @@ _start:
     // and we also know will be available to the ARM CPU. No matter what
     // settings we use to split the memory between the GPU and ARM CPU
     // ldr     sp, =0x8000
-    ldr     sp, =(64 * 1024 * 1024)
+    ldr     sp, =(128 * 1024 * 1024)
 
     // R0 = System Control Register
     mrc p15,0,r0,c1,c0,0
@@ -51,6 +51,13 @@ _start:
 	
     // System Control Register = R0
     mcr p15,0,r0,c1,c0,0
+
+	//mov r1,#1 //227133513 //0x49249249
+	//mov r0,#538968068 //0x20200004
+	//str r1,[r0]
+	//mov r1,#262144 // 0x40000
+	//str r1,[r0, #36]
+	
 	
     // Run the c startup function - should not return and will call kernel_main
     b       kernel_main

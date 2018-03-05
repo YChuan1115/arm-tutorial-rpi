@@ -11,7 +11,9 @@
 		("DMB ISHST");
 #else
 #define dmb() asm volatile \
-		("mcr p15, #0, %[zero], c7, c7, #0" : : [zero] "r" (0) ); 
+		("mcr p15, #0, %[zero], c7, c7, #0" : : [zero] "r" (0) ); \
+		asm volatile \
+		("mcr p15, #0, %[zero], c7, c10, #0" : : [zero] "r" (0) ); 		
 #endif
 
 /*

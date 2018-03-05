@@ -134,6 +134,8 @@ void kernel_main( unsigned int r0, unsigned int r1, unsigned int atags )
 	int mapper = 1;
 	int signal = 0;
 	int pg = 0;
+	gpio[GPIO_GPFSEL1] = 0x49249249;
+	gpio[GPIO_GPCLR0] = RWAIT;
 
     for(ra=0;;ra+=0x00100000)
     {
